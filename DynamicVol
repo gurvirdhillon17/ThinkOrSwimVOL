@@ -1,0 +1,45 @@
+declare lower;
+
+# Proxy buyer/seller volume by using % of candle "won" by each side
+def range = high - low;
+def isFlat = range == 0;
+
+def buy_volume;
+def sell_volume;
+if (isFlat) {
+    # In case of a flat candle, treat buy and sell volume as half of total volume
+    buy_volume = volume / 2;
+    sell_volume = volume / 2;
+} else {
+    buy_volume = volume * (close - low) / range;
+    sell_volume = volume * (high - close) / range;
+}
+def buyers_winning = buy_volume >= sell_volume;
+
+# Smaller Volume (lower bar)
+plot SmallerVolume = if buyers_winning then sell_volume else buy_volume;
+SmallerVolume.setPaintingStrategy(PaintingStrategy.Histogram);
+SmallerVolume.HideBubble();
+SmallerVolume.HideTitle();
+SmallerVolume.SetLineWeight(1);
+SmallerVolume.AssignValueColor(
+if buyers_winning then Color.RED
+else Color.GREEN);
+
+# Bigger Volume (higher bar)
+plot BiggerVolume = volume;
+BiggerVolume.setPaintingStrategy(PaintingStrategy.Histogram);
+BiggerVolume.HideBubble();
+BiggerVolume.SetLineWeight(1);
+BiggerVolume.AssignValueColor(
+if buyers_winning then Color.GREEN 
+else Color.RED);
+
+# Rotating Volume Bias Labels
+def buy_percent = Round((buy_volume / volume) * 100, 1);
+def sell_percent = Round((sell_volume / volume) * 100, 1);
+def buy_larger = buy_percent >= sell_percent;
+def larger_percentage = if buy_larger then buy_percent else sell_percent;
+def smaller_percentage = if buy_larger then sell_percent else buy_percent;
+AddLabel(yes, larger_percentage + "% ", if buy_larger then Color.GREEN else Color.RED);
+AddLabel(yes, smaller_percentage + "% ", if buy_larger then Color.RED else Color.GREEN);
